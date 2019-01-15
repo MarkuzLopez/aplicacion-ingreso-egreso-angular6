@@ -8,6 +8,12 @@ import { Router } from '@angular/router';
 import { map } from 'rxjs/operators'
 import Swal from 'sweetalert2';
 import { User } from './user.model';
+///ngrx
+import { Store } from '@ngrx/store';
+import { AppState } from '../app.reducers';
+import { ActivarLoadingAction, DesactivarLoadingAction } from '../shared/ui.accions';
+import { SetUserAction } from './auth.actions';
+import { Subscription } from 'rxjs';
 
 
 @Injectable({
@@ -15,15 +21,32 @@ import { User } from './user.model';
 })
 export class AuthService {
 
-  constructor(private afAuth: AngularFireAuth, private router: Router, private firestoreDB: AngularFirestore ) { }
+  private userSubcription: Subscription = new Subscription();
+
+  constructor(private afAuth: AngularFireAuth, private router: Router,
+              private firestoreDB: AngularFirestore, private _store: Store<AppState> ) { }
 
   initAuthListener(){ //// metodo para verificar si los usuarios estan logueados o no y solose ejevcuta uan vez
     this.afAuth.authState.subscribe((fbUser: firebase.User ) => { ///y se agrega en el app.component.ts
-      console.log(fbUser);      
+       if(fbUser) { // cuando exista el usuario de firebvase este activo el observable
+         this.userSubcription =
+         this.firestoreDB.doc(`${fbUser.uid}/usuario`).valueChanges()
+              .subscribe((usuarioObj: any) => { 
+                const newUser =  new User( usuarioObj );
+                console.log(newUser);              
+                this._store.dispatch(new SetUserAction(newUser) );
+              });
+       } else  { // si no que cierre la session y que ya no utilize el observable.. 
+         this.userSubcription.unsubscribe();
+       }
     })
   }
 
   crearUsuario(nombre: string, email: string, password: string) { 
+
+    //crear el dispatch  y activarlo true
+    this._store.dispatch( new ActivarLoadingAction() )
+
     this.afAuth.auth
                 .createUserWithEmailAndPassword(email, password)
                 .then( resp => { 
@@ -38,6 +61,7 @@ export class AuthService {
                       .set( user )
                       .then( () => {                              
                             this.router.navigate(['/'])
+                            this._store.dispatch( new DesactivarLoadingAction() ) /// cuando ya se hayya creado o bien se haya logueado de manera satisfactoria desactivarlo..
                       })
                       .catch( error => { 
                         Swal('Error al crear collecion', error.message, 'error')
@@ -49,13 +73,18 @@ export class AuthService {
   }
 
   login(email: string, password: string) { 
+    /// crear dispatch para activar el obsevable del store 
+    this._store.dispatch(new ActivarLoadingAction() );
+
     this.afAuth.auth
                 .signInWithEmailAndPassword(email, password)
                 .then(respuesta  => {                  
-                  this.router.navigate([''])                  
+                  this.router.navigate([''])
+                  this._store.dispatch(new DesactivarLoadingAction() )             
                 })
                 .catch(error => {                   
                    Swal('Error en el login', error.mesage, 'error')
+                   this._store.dispatch(new DesactivarLoadingAction() )
                 })
   }
 

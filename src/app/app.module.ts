@@ -4,6 +4,12 @@ import { NgModule } from '@angular/core';
 /// modulos 
 import { AppRoutingModule } from './app-routing.module';
 import { FormsModule } from '@angular/forms';
+
+//NGRX REDUX
+import { StoreModule } from '@ngrx/store';
+import { appReducers } from './app.reducers';
+import { StoreDevtoolsModule } from '@ngrx/store-devtools'
+
 /// firebase 
 import { AngularFireModule } from '@angular/fire';
 import { AngularFirestoreModule } from '@angular/fire/firestore';
@@ -21,7 +27,6 @@ import { FooterComponent } from './shared/footer/footer.component';
 import { NavbarComponent } from './shared/navbar/navbar.component';
 import { SidebarComponent } from './shared/sidebar/sidebar.component';
 import { environment } from '../environments/environment';
-
 
 
 @NgModule({
@@ -45,7 +50,12 @@ import { environment } from '../environments/environment';
    // AngularFireModule.initializeApp(environment.firebase, 'my-app-name')
     AngularFirestoreModule,
     AngularFireAuthModule,
-    AngularFireStorageModule
+    AngularFireStorageModule,
+    StoreModule.forRoot(appReducers),
+    StoreDevtoolsModule.instrument({ 
+      maxAge: 25, 
+      logOnly: environment.production
+    })
   ],
   providers: [],
   bootstrap: [AppComponent]
